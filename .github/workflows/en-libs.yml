@@ -1,0 +1,49 @@
+name: microG libs to be bundled with a GAEN-requiring app
+
+on:
+    push:
+        tags:
+            - 'v*\+en-libs'
+
+jobs:
+    build:
+        name: "Build microG EN libraries"
+        runs-on: ubuntu-latest
+        env:
+            ARCHIVE_NAME: microg-en-libs
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v2
+
+            - name: Set up JDK
+              uses: actions/setup-java@v1
+              with:
+                  java-version: 1.8
+
+            - name: Build libs
+              run: ./build_libs.sh
+
+            - name: Prepare libs artifact
+              run: zip --junk-paths ${ARCHIVE_NAME} $( find . -name 'play-*.aar' -o -name 'play-*.jar' )
+
+            - name: Create release
+              id: create_release
+              uses: actions/create-release@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  tag_name: ${{ github.ref }}
+                  release_name: Release ${{ github.ref }}
+                  draft: false
+                  prerelease: ${{ contains(github.ref, 'alpha') }}
+
+            - name: Upload libs artifact
+              uses: actions/upload-release-asset@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  upload_url: ${{ steps.create_release.outputs.upload_url }}
+                  asset_path: ./${{ env.ARCHIVE_NAME }}.zip
+                  asset_name: ${{ env.ARCHIVE_NAME }}.zip
+                  asset_content_type: application/zip
