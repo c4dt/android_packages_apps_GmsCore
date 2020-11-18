@@ -353,6 +353,9 @@ class ExposureDatabase private constructor(private val context: Context) : SQLit
         val keys = listSingleDiagnosisKeysPendingSearch(tid, database)
         val oldestRpi = oldestRpi
         for (key in keys) {
+            val keyDataString = key.keyData.joinToString(separator="", transform={"%02X".format(it)})
+            Log.d(TAG, "[finishSingleMatching] processing $keyDataString")
+
             if ((key.rollingStartIntervalNumber + key.rollingPeriod).toLong() * ROLLING_WINDOW_LENGTH_MS + ALLOWED_KEY_OFFSET_MS < oldestRpi) {
                 // Early ignore because key is older than since we started scanning.
                 applySingleDiagnosisKeySearchResult(key, false, database)
@@ -388,6 +391,9 @@ class ExposureDatabase private constructor(private val context: Context) : SQLit
             var found = 0
             var riskLogged = 0
             for (key in keys) {
+                val keyDataString = key.keyData.joinToString(separator="", transform={"%02X".format(it)})
+                Log.d(TAG, "[finishFileMatching] processing $keyDataString")
+
                 if (key.transmissionRiskLevel > riskLogged) {
                     riskLogged = key.transmissionRiskLevel
                     Log.d(TAG, "First key with risk ${key.transmissionRiskLevel}: ${ByteString.of(*key.keyData).hex()} starts ${key.rollingStartIntervalNumber}")
@@ -446,6 +452,8 @@ class ExposureDatabase private constructor(private val context: Context) : SQLit
     fun findAllMeasuredExposures(tid: Long, database: SQLiteDatabase = readableDatabase) = findAllSingleMeasuredExposures(tid, database) + findAllFileMeasuredExposures(tid, database)
 
     private fun findMeasuredExposures(key: TemporaryExposureKey, database: SQLiteDatabase = readableDatabase): List<MeasuredExposure> {
+        val keyDataString = key.keyData.joinToString(separator="", transform={"%02X".format(it)})
+        Log.d(TAG, "[findMeasuredExposures] checking $keyDataString")
         val allRpis = key.generateAllRpiIds()
         val rpis = (0 until key.rollingPeriod).map { i ->
             val pos = i * 16
